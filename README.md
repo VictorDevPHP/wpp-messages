@@ -45,6 +45,18 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Test
+
+```bash
+# unit tests
+$ npm run test
+
+# e2e tests
+$ npm run test:e2e
+
+# test coverage
+$ npm run test:cov
+```
 ## Instalar node v20
 
 ## Instalar sharp 
@@ -63,4 +75,55 @@ npm run build
 pm2 restart nome_do_serviço
 ```
 
+# Endpoints
 
+### 1. Connect to WhatsApp
+
+- **Endpoint:** `/whatsapp/connect`
+- **Method:** `GET`
+- **Description:** Establishes a connection to WhatsApp.
+
+#### Request
+
+```http
+GET /wppconnect/connect HTTP/1.1
+```
+#### Aguarde o QRCode no log do pm2(pm2 logs), no log do npm run start
+### Response
+Code: 200 OK
+Body:
+```json
+  "success": true,
+  "message": "WhatsApp connected successfully"
+```
+Code: 500 Internal Server Error
+Body:
+```json
+  "success": false,
+  "error": "Failed to connect to WhatsApp"
+```
+
+### 2. Send Message
+```bash
+curl -X POST http://localhost:3000/wppconnect/sendMessage -H "Content-Type: application/json" -d '{"phone": "numero", "message": "Sua mensagem aqui"}'
+```
+Code: 200 OK
+Body:
+```json
+  "success": true,
+  "result": "Message sent successfully"
+```
+Code: 400 Bad Request
+
+Body:
+```json
+  "success": false,
+  "error": "Phone and message are required"
+```
+Code: 500 Internal Server Error
+
+Body:
+```json
+  "success": false,
+  "error": "Failed to send message"
+```
