@@ -9,7 +9,9 @@ export class WppConnectService {
     const createOption: CreateOptions = {
       session: 'session-name',
       headless: true,
-      puppeteerOptions: {},
+      puppeteerOptions: {
+        args: ['--no-sandbox'],
+      },
       logQR: true,
     };
 
