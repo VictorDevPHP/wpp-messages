@@ -1,38 +1,40 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Documentação do Projeto
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Índice
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+1. [Descrição](#descrição)
+2. [Instalação](#instalação)
+3. [Executando o aplicativo](#executando-o-aplicativo)
+4. [Testes](#testes)
+5. [Endpoints](#endpoints)
+6. [Autenticação](#autenticação)
 
-## Description
+## Descrição
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Installation
+## Instalação
 
 ```bash
 $ npm install
 ```
 
-## Running the app
+### Instalar node v20
+
+### Instalar sharp 
+
+```bash
+#instale com -g --include=optional
+npm install -g --include=optional sharp
+```
+
+### No servidor Instale o Chromium 
+
+```bash
+apt-get install chromium-browser
+```
+
+## Executando o aplicativo
 
 ```bash
 # development
@@ -45,7 +47,14 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
-## Test
+### Execute npm run build e pm2 restart para cada alteração
+
+```bash
+npm run build
+pm2 restart nome_do_serviço
+```
+
+## Testes
 
 ```bash
 # unit tests
@@ -57,73 +66,94 @@ $ npm run test:e2e
 # test coverage
 $ npm run test:cov
 ```
-## Instalar node v20
 
-## Instalar sharp 
-```bash
-#instale com -g --include=optional
-npm install -g --include=optional sharp
-```
-## No servidor Instale o Chromium 
-```bash
-apt-get install chromium-browser
-```
-## Execute npm run build e pm2 restart para cada alteração
-## No servidor Instale o Chromium 
-```bash
-npm run build
-pm2 restart nome_do_serviço
-```
+## Endpoints
 
-# Endpoints
+### `GET /wppconnect/connect`
 
-### 1. Connect to WhatsApp
+Este endpoint inicia uma conexão com o serviço WppConnect.
 
-- **Endpoint:** `/whatsapp/connect`
-- **Method:** `GET`
-- **Description:** Establishes a connection to WhatsApp.
+**Resposta**: Não retorna nenhum corpo de resposta.
 
-#### Request
+### `GET /wppconnect/qr`
 
-```http
-GET /wppconnect/connect HTTP/1.1
-```
-#### Aguarde o QRCode no log do pm2(pm2 logs), no log do npm run start
-### Response
-Code: 200 OK
-Body:
+Este endpoint retorna uma página HTML com um QR Code que pode ser escaneado pelo WhatsApp para estabelecer uma conexão.
+
+**Resposta**: Retorna uma página HTML com o QR Code.
+
+### `POST /wppconnect/sendMessage`
+
+Este endpoint envia uma mensagem através do serviço WppConnect.
+
+**Parâmetros do corpo**:
+
+- `phone`: O número de telefone para o qual a mensagem será enviada.
+- `text`: O texto da mensagem a ser enviada.
+
+**Resposta**: A resposta depende do serviço WppConnect.
+
+### `GET /wppconnect/sendMessage`
+
+Este endpoint retorna uma mensagem informando que o método POST deve ser usado para enviar uma mensagem.
+
+**Resposta**: Retorna um objeto JSON com a chave `message`.
+
+Exemplo de resposta:
 ```json
-  "success": true,
-  "message": "WhatsApp connected successfully"
+{
+  "message": "Please use POST method to send a message"
+}
 ```
-Code: 500 Internal Server Error
-Body:
+
+## Autenticação
+
+### Autenticação via Chave
+
+Nossa API utiliza um método de autenticação baseado em uma chave numérica calculada a partir da data atual. A chave é calculada multiplicando o dia, mês e ano da data atual.
+
+#### Como calcular a chave
+
+1. Pegue a data atual.
+2. Multiplique o dia, mês (incrementado em 1) e ano para obter a chave.
+
+Por exemplo, se a data atual for 2 de janeiro de 2023, a chave será calculada como:
+
+```
+2 (dia) * 1 (mês de janeiro, incrementado em 1) * 2023 (ano) = 4046
+```
+
+#### Como usar a chave
+
+Ao fazer uma solicitação para a API, inclua a chave no corpo da solicitação. Por exemplo:
+
 ```json
+{
+  "phone": "1234567890",
+  "text": "Hello, world!",
+  "key": 4046
+}
+```
+
+#### Respostas de autenticação
+
+Se a chave não for fornecida ou se a chave fornecida não corresponder à chave calculada no servidor, a API retornará uma resposta com `success: false` e uma mensagem de erro.
+
+Exemplo de resposta quando a chave não é fornecida:
+
+```json
+{
   "success": false,
-  "error": "Failed to connect to WhatsApp"
+  "message": "Key not provided"
+}
 ```
 
-### 2. Send Message
-```bash
-curl -X POST http://localhost:3000/wppconnect/sendMessage -H "Content-Type: application/json" -d '{"phone": "numero", "message": "Sua mensagem aqui"}'
-```
-Code: 200 OK
-Body:
-```json
-  "success": true,
-  "result": "Message sent successfully"
-```
-Code: 400 Bad Request
+Exemplo de resposta quando a chave é inválida:
 
-Body:
 ```json
+{
   "success": false,
-  "error": "Phone and message are required"
+  "message": "Invalid key"
+}
 ```
-Code: 500 Internal Server Error
 
-Body:
-```json
-  "success": false,
-  "error": "Failed to send message"
-```
+Se a autenticação for bem-sucedida, a API processará a solicitação e retornará a resposta apropriada.
