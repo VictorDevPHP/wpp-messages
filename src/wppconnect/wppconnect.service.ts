@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { create, CreateOptions, Whatsapp } from "@wppconnect-team/wppconnect";
-import axios from "axios";
+import * as fs from 'fs';
 
 @Injectable()
 export class WppConnectService {
@@ -13,10 +13,12 @@ export class WppConnectService {
    * @returns A promise that resolves to a boolean indicating whether the connection was successful.
    */
   async connect(): Promise<boolean> {
+    const chromePath = process.env.CHROME_PATH;
     this.client = await create({
       session: "session-name",
       headless: true,
       puppeteerOptions: {
+        executablePath: fs.existsSync(chromePath) ? chromePath : undefined,
         args: ["--no-sandbox"],
       },
       logQR: false,
