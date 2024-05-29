@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable} from "@nestjs/common";
+import axios from 'axios';
 import { create, CreateOptions, Whatsapp } from "@wppconnect-team/wppconnect";
 import * as fs from 'fs';
 
@@ -10,25 +11,55 @@ export class WppConnectService {
 
   /**
    * Connects to the WhatsApp service.
-   * @returns A promise that resolves to a boolean indicating whether the connection was successful.
+   * @returns A Promise that resolves to a boolean indicating whether the connection was successful.
    */
   async connect(): Promise<boolean> {
     const chromePath = process.env.CHROME_PATH;
-    this.client = await create({
-      session: "session-name",
-      headless: true,
-      puppeteerOptions: {
-        executablePath: fs.existsSync(chromePath) ? chromePath : undefined,
-        args: ["--no-sandbox"],
-      },
-      logQR: false,
-      catchQR: (base64Qr, asciiQR) => {
-        this.qrCode = base64Qr;
-        this.qrCodeGenerated = true;
-        this.getQrCode();
-      },
-    });
-    return true;
+    let connected = false;
+    let attempts = 1;
+    const maxAttempts = 3;
+    do {
+      try {
+        this.client = await create({
+          session: "session-name",
+          headless: process.env.HEADLESS === 'true' ? true : process.env.HEADLESS === 'false' ? false : 'shell',
+          puppeteerOptions: {
+            executablePath: fs.existsSync(chromePath) ? chromePath : undefined,
+            args: ["--no-sandbox"],
+          },
+          logQR: true,
+          catchQR: async (base64Qr, asciiQR) => {
+            this.qrCode = base64Qr;
+            this.qrCodeGenerated = true;
+            this.getQrCode();
+            setTimeout(() => {
+              this.qrCodeGenerated = false;
+              // Notificar a aplicação Laravel que o QRCode expirou
+              axios.post('http://exemple-dash.com/endpoint', {
+                message: 'QRCode expirou',
+                session: "session-name"
+              })
+              .then(response => {
+                console.log('Notificação enviada com sucesso');
+              })
+              .catch(error => {
+                console.error('Erro ao enviar notificação:', error);
+              });
+            }, 60000);
+          },
+        });
+        connected = true;
+      } catch (error) {
+        console.error('Erro ao conectar:', error);
+        attempts++;
+        console.log('Tentativa ' + attempts+'/'+maxAttempts);
+        if (attempts >= maxAttempts) {
+          console.error('Número máximo de tentativas atingido');
+          break;
+        }
+      }
+    } while (!connected && attempts <= maxAttempts);
+    return connected;
   }
 
   /**
@@ -36,6 +67,7 @@ export class WppConnectService {
    * @returns The QR code as a string.
    */
   getQrCode(): string {
+    console.log("QR Gerado");
     return this.qrCode;
   }
   
