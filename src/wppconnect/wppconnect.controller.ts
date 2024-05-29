@@ -11,10 +11,19 @@ export class WppConnectController {
   ) {}
 
   @Get("connect")
+  /**
+   * Connects to the WhatsApp server.
+   * @param res - The response object.
+   * @returns A promise that resolves when the connection is established.
+   */
   async connect(@Res() res: Response): Promise<void> {
     await this.wppConnectService.connect();
   }
   @Get("qr")
+  /**
+   * Retrieves the QR code for WhatsApp Web.
+   * @param res - The response object to send the HTML page with the QR code.
+   */
   getQrCode(@Res() res: Response) {
     const qrCode = this.wppConnectService.getQrCode();
     res.send(`
@@ -85,20 +94,36 @@ export class WppConnectController {
   }
 
   @Get("status")
+  /**
+   * Checks the connection status.
+   * @returns An object indicating the success of the connection.
+   */
+  /**
+   * Checks the connection status of the WhatsApp Connect service.
+   * @returns An object indicating the success of the connection.
+   */
   checkConnectionStatus() {
     const isConnected = !!this.wppConnectService.getQrCode();
     return { success: isConnected };
   }
 
   @Get("success")
+  /**
+   * Handles the successful connection event.
+   * 
+   * @param res - The response object.
+   */
   connectionSuccess(@Res() res: Response) {
     res.json({ success: true, message: "Client connected" });
   }
 
   @Post("sendMessage")
-  async sendMessage(
-    @Body() body: { phone: string; text: string; key: string },
-  ) {
+  /**
+   * Sends a message using the WhatsApp Connect service.
+   * @param body - The request body containing the phone number, message text, and API key.
+   * @returns A promise that resolves to the result of the message sending operation.
+   */
+  async sendMessage(@Body() body: { phone: string; text: string; key: string },) {
     const { phone, text, key} = body;
     const keyEnv = this.configService.get("API_KEY");
     if (key !== keyEnv) {
@@ -109,6 +134,11 @@ export class WppConnectController {
   }
 
   @Get("sendMessage")
+  /**
+   * Sends a message using the GET method.
+   * 
+   * @returns An object containing the message indicating that the POST method should be used to send a message.
+   */
   async sendMessageGET() {
     const retorno = {
       message: "Please use POST method to send a message",
