@@ -92,25 +92,9 @@ export class WppConnectController {
   }
 
   @Post('sendMessage')
-  async sendMessage(@Body() body: { phone: string; text: string; key?: number }) {
-    const { phone, text, key } = body;
-    if (key === undefined) {
-      return {
-        success: false,
-        message: 'Key not provided',
-      };
-    }
-    const date = new Date();
-    const serverKey = date.getDate() * (date.getMonth() + 1) * date.getFullYear();
-    
-    if (serverKey !== key) {
-      return {
-        success: false,
-        message: 'Invalid key',
-      };
-    } else {
-      return this.wppConnectService.sendMessage(phone, text);
-    }
+  async sendMessage(@Body() body: { phone: string; text: string}) {
+    const { phone, text} = body;
+    return this.wppConnectService.sendMessage(phone, text);
   }
 
   @Get('sendMessage')
