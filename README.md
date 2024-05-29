@@ -8,6 +8,7 @@
 4. [Testes](#testes)
 5. [Endpoints](#endpoints)
 6. [Autenticação](#autenticação)
+7. [Env](#env)
 
 ## Descrição
 
@@ -157,3 +158,20 @@ Exemplo de resposta quando a chave é inválida:
 ```
 
 Se a autenticação for bem-sucedida, a API processará a solicitação e retornará a resposta apropriada.
+
+# Configuração do Arquivo .env
+
+O arquivo `.env` é usado para definir variáveis de ambiente que são usadas pelo aplicativo. Aqui estão as variáveis que você precisa definir:
+
+## Como Configurar
+
+Para configurar essas variáveis, crie um arquivo chamado `.env` na raiz do seu projeto e adicione as seguintes linhas:
+
+```properties
+DOMAIN='seu_dominio'
+API_KEY='sua_chave_de_api'
+```
+
+Substitua `'seu_dominio'` e `'sua_chave_de_api'` pelos valores apropriados.
+
+Depois de criar e configurar o arquivo `.env`, o aplicativo usará essas variáveis de ambiente quando for executado.
