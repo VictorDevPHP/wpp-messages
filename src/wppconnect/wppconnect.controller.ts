@@ -1,16 +1,20 @@
-import { Body, Controller, Get, Post, Res } from '@nestjs/common';
-import { WppConnectService } from './wppconnect.service';
-import { Response } from 'express';
+import { Body, Controller, Get, Post, Res } from "@nestjs/common";
+import { WppConnectService } from "./wppconnect.service";
+import { Response } from "express";
+import { ConfigService } from "@nestjs/config";
 
-@Controller('wppconnect')
+@Controller("wppconnect")
 export class WppConnectController {
-  constructor(private readonly wppConnectService: WppConnectService) {}
+  constructor(
+    private readonly wppConnectService: WppConnectService,
+    private readonly configService: ConfigService,
+  ) {}
 
-  @Get('connect')
+  @Get("connect")
   async connect(@Res() res: Response): Promise<void> {
     await this.wppConnectService.connect();
   }
-  @Get('qr')
+  @Get("qr")
   getQrCode(@Res() res: Response) {
     const qrCode = this.wppConnectService.getQrCode();
     res.send(`
@@ -80,27 +84,34 @@ export class WppConnectController {
     `);
   }
 
-  @Get('status')
+  @Get("status")
   checkConnectionStatus() {
     const isConnected = !!this.wppConnectService.getQrCode();
     return { success: isConnected };
   }
 
-  @Get('success')
+  @Get("success")
   connectionSuccess(@Res() res: Response) {
-    res.json({ success: true, message: 'Client connected' });
+    res.json({ success: true, message: "Client connected" });
   }
 
-  @Post('sendMessage')
-  async sendMessage(@Body() body: { phone: string; text: string}) {
-    const { phone, text} = body;
-    return this.wppConnectService.sendMessage(phone, text);
+  @Post("sendMessage")
+  async sendMessage(
+    @Body() body: { phone: string; text: string; key: string },
+  ) {
+    const { phone, text, key} = body;
+    const keyEnv = this.configService.get("API_KEY");
+    if (key !== keyEnv) {
+      return { message: "Invalid API Key", success: false, code: 401 + ' Unauthorized'};
+    }else{
+      return this.wppConnectService.sendMessage(phone, text);
+    }
   }
 
-  @Get('sendMessage')
+  @Get("sendMessage")
   async sendMessageGET() {
     const retorno = {
-      message: 'Please use POST method to send a message',
+      message: "Please use POST method to send a message",
     };
     return retorno;
   }
