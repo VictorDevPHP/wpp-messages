@@ -8,8 +8,7 @@
 4. [Testes](#testes)
 5. [Endpoints](#endpoints)
 6. [Autenticação](#autenticação)
-7. [Env](#env)
-
+7. [Configuração do Arquivo .env](#configuração-do-arquivo-env)
 ## Descrição
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
