@@ -10,14 +10,15 @@ export class WppConnectController {
     private readonly configService: ConfigService,
   ) {}
 
-  @Get("connect")
+  @Post("connect")
   /**
    * Connects to the WhatsApp server.
    * @param res - The response object.
+   * @param sessionName - The name of the session.
    * @returns A promise that resolves when the connection is established.
    */
-  async connect(@Res() res: Response): Promise<void> {
-    await this.wppConnectService.connect();
+  async connect(@Res() res: Response, @Body('sessionName') sessionName: string): Promise<void> {
+    await this.wppConnectService.connect(sessionName);
   }
   @Get("qr")
   /**
@@ -139,10 +140,20 @@ export class WppConnectController {
    * 
    * @returns An object containing the message indicating that the POST method should be used to send a message.
    */
-  async sendMessageGET() {
-    const retorno = {
+    async sendMessageGET() {
+      const retorno = {
       message: "Please use POST method to send a message",
     };
     return retorno;
+  }
+
+  @Get("listSessions")
+  /**
+   * Lists all sessions.
+   * @returns An array of all session names.
+   */
+  listSessions() {
+    console.log("Listando sessões: ", this.wppConnectService.listSessions());
+    return this.wppConnectService.listSessions();
   }
 }

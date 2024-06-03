@@ -1,27 +1,33 @@
 import { Injectable} from "@nestjs/common";
-import axios from 'axios';
-import { create, CreateOptions, Whatsapp } from "@wppconnect-team/wppconnect";
+import * as path from 'path';
+import { InjectRepository } from '@nestjs/typeorm';
+import { create, Whatsapp } from "@wppconnect-team/wppconnect";
 import * as fs from 'fs';
+import { log } from "console";
+import { QRCode } from '../models/qrCode.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class WppConnectService {
+  constructor(
+    @InjectRepository(QRCode)
+    private qrCodeRepository: Repository<QRCode>,
+  ) {}
   private client: Whatsapp;
   private qrCode: string;
   private qrCodeGenerated = false;
+  private sessions: Map<string, Whatsapp> = new Map();
 
   /**
    * Connects to the WhatsApp service.
    * @returns A Promise that resolves to a boolean indicating whether the connection was successful.
    */
-  async connect(): Promise<boolean> {
+  async connect(sessionName: string): Promise<boolean> {
     const chromePath = process.env.CHROME_PATH;
     let connected = false;
-    let attempts = 1;
-    const maxAttempts = 3;
-    do {
       try {
         this.client = await create({
-          session: "session-name",
+          session: sessionName,
           headless: process.env.HEADLESS === 'true' ? true : process.env.HEADLESS === 'false' ? false : 'shell',
           puppeteerOptions: {
             executablePath: fs.existsSync(chromePath) ? chromePath : undefined,
@@ -31,34 +37,21 @@ export class WppConnectService {
           catchQR: async (base64Qr, asciiQR) => {
             this.qrCode = base64Qr;
             this.qrCodeGenerated = true;
+            this.qrCodeRepository.insert({
+              qrCode: base64Qr,
+              session: sessionName
+            }).then(() => {
+              log('QR Code salvo no banco de dados com sucesso');
+            }).catch(error => {
+              console.error('Erro ao salvar o QR Code no banco de dados: ', error);
+            });
             this.getQrCode();
-            setTimeout(() => {
-              this.qrCodeGenerated = false;
-              // Notificar a aplicação Laravel que o QRCode expirou
-              axios.post('http://exemple-dash.com/endpoint', {
-                message: 'QRCode expirou',
-                session: "session-name"
-              })
-              .then(response => {
-                console.log('Notificação enviada com sucesso');
-              })
-              .catch(error => {
-                console.error('Erro ao enviar notificação:', error);
-              });
-            }, 60000);
           },
         });
         connected = true;
       } catch (error) {
-        console.error('Erro ao conectar:', error);
-        attempts++;
-        console.log('Tentativa ' + attempts+'/'+maxAttempts);
-        if (attempts >= maxAttempts) {
-          console.error('Número máximo de tentativas atingido');
-          break;
-        }
+        connected = false;
       }
-    } while (!connected && attempts <= maxAttempts);
     return connected;
   }
 
@@ -93,5 +86,10 @@ export class WppConnectService {
         error: `${error.message} phone: ${phone} message: ${text}`,
       };
     }
+  }
+  
+  listSessions(): string[] {
+    const tokenDir = path.join(__dirname, 'tokens');
+    return fs.readdirSync(tokenDir);
   }
 }
