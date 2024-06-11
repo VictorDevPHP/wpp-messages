@@ -52,6 +52,15 @@ export class WppConnectService {
       } catch (error) {
         connected = false;
       }
+      if(connected == false){
+        const sessionDirPath = path.join(__dirname, '..', '..', 'tokens', sessionName);
+        console.log(sessionDirPath);
+        if (fs.existsSync(sessionDirPath)) {
+          console.log(`Directory ${sessionDirPath} exists`);
+          fs.rmdirSync(sessionDirPath, { recursive: true });
+          console.log(`Directory ${sessionDirPath} has been removed`);
+        }
+      }
     return connected;
   }
 
