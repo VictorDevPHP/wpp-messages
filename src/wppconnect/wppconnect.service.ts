@@ -1,11 +1,13 @@
 import { Injectable} from "@nestjs/common";
 import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
-import { create, Whatsapp } from "@wppconnect-team/wppconnect";
+import { create, Whatsapp, Message } from "@wppconnect-team/wppconnect";
 import * as fs from 'fs';
 import { log } from "console";
 import { QRCode } from '../models/qrCode.entity';
 import { Repository } from 'typeorm';
+import { existsSync, mkdirSync } from 'fs';
+
 
 @Injectable()
 export class WppConnectService {
@@ -13,7 +15,7 @@ export class WppConnectService {
     @InjectRepository(QRCode)
     private qrCodeRepository: Repository<QRCode>,
   ) {}
-  private client: Whatsapp;
+  public client: Whatsapp;
   private qrCode: string;
   private qrCodeGenerated = false;
   private sessions: Map<string, Whatsapp> = new Map();
@@ -60,19 +62,12 @@ export class WppConnectService {
           fs.rmdirSync(sessionDirPath, { recursive: true });
           console.log(`Directory ${sessionDirPath} has been removed`);
         }
+      }else{
+        this.startListeningForMessages();
       }
     return connected;
   }
 
-  /**
-   * Retrieves the QR code for the WhatsApp connection.
-   * @returns The QR code as a string.
-   */
-  getQrCode(): string {
-    console.log("QR Gerado");
-    return this.qrCode;
-  }
-  
   /**
    * Sends a message to a phone number using the connected client.
    * @param phone The phone number to send the message to.
@@ -96,9 +91,56 @@ export class WppConnectService {
       };
     }
   }
+
+    /**
+   * Starts listening for incoming messages.
+   */
+    async startListeningForMessages(): Promise<void> {
+      if (!this.client) {
+        throw new Error("Client is not connected");
+      }
+      this.client.onMessage((message: Message) => {
+        console.log("Received a new message:", message);
+        // Aqui você pode adicionar o código para processar a mensagem recebida.
+      });
+    }
+
+
+    async startAllSessions(): Promise<void> {
+      const sessions = this.listSessions();
+      if (!sessions || sessions.length === 0) {
+        console.error('No sessions found');
+        return;
+      }
+      for (const session of sessions) {
+        try {
+          const connected = await this.connect(session);
+          if (connected) {
+            console.log(`Session ${session} started successfully.`);
+          } else {
+            console.error(`Failed to start session ${session}`);
+          }
+        } catch (error) {
+          console.error(`Failed to start session ${session}:`, error);
+        }
+      }
+      return Promise.resolve();
+    }
+
+  /**
+   * Retrieves the QR code for the WhatsApp connection.
+   * @returns The QR code as a string.
+   */
+  getQrCode(): string {
+    console.log("QR Gerado");
+    return this.qrCode;
+  }
   
   listSessions(): string[] {
-    const tokenDir = path.join(__dirname, 'tokens');
-    return fs.readdirSync(tokenDir);
+    const sessionDirPath = path.join(__dirname, '..', '..', 'tokens');
+    if (!existsSync(sessionDirPath)) {
+      mkdirSync(sessionDirPath);
+    }
+    return fs.readdirSync(sessionDirPath);
   }
 }

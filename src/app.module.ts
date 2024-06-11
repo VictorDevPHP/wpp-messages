@@ -1,11 +1,14 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { WppConnectModule } from './wppconnect/wppconnect.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { WppConnectService } from './wppconnect/wppconnect.service';
+import { QRCode } from 'src/entities/qrcode.entity/qrcode.entity'; 
 
 @Module({
   imports: [
     WppConnectModule,
+    TypeOrmModule.forFeature([QRCode]), // Importe o TypeOrmModule para a entidade QRCode
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: 'localhost',
@@ -18,5 +21,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     }),
     ConfigModule.forRoot(),
   ],
+  providers: [WppConnectService],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  constructor(private readonly wppConnectService: WppConnectService) {}
+
+  async onModuleInit() {
+    const response = await this.wppConnectService.startAllSessions();
+  }
+}
