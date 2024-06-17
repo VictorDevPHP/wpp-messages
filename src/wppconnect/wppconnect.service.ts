@@ -36,6 +36,7 @@ export class WppConnectService {
             args: ["--no-sandbox"],
           },
           logQR: true,
+          autoClose: 0,
           catchQR: async (base64Qr, asciiQR) => {
             this.qrCode = base64Qr;
             this.qrCodeGenerated = true;
