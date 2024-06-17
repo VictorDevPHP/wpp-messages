@@ -19,6 +19,7 @@ export class WppConnectService {
   private qrCode: string;
   private qrCodeGenerated = false;
   private sessions: Map<string, Whatsapp> = new Map();
+  private clientSessions = new Map();
 
   /**
    * Connects to the WhatsApp service.
@@ -51,6 +52,7 @@ export class WppConnectService {
             this.getQrCode();
           },
         });
+        this.clientSessions.set(sessionName, this.client);
         connected = true;
       } catch (error) {
         connected = false;
@@ -97,12 +99,11 @@ export class WppConnectService {
    * Starts listening for incoming messages.
    */
     async startListeningForMessages(): Promise<void> {
-      if (!this.client) {
-        throw new Error("Client is not connected");
-      }
-      this.client.onMessage((message: Message) => {
-        console.log("Received a new message:", message);
-        // Aqui você pode adicionar o código para processar a mensagem recebida.
+      this.clientSessions.forEach((client, sessionName) => {
+        client.onMessage((message: Message) => {
+          console.log(`Received a new message on session ${sessionName}:`, message.content);
+          // Aqui você pode adicionar o código para processar a mensagem recebida.
+        });
       });
     }
 
