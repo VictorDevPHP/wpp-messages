@@ -7,6 +7,7 @@ import { log } from "console";
 import { QRCode } from '../models/qrCode.entity';
 import { Repository } from 'typeorm';
 import { existsSync, mkdirSync } from 'fs';
+import { GeminiService } from "src/api/gemini/gemini.service";
 
 
 @Injectable()
@@ -14,12 +15,14 @@ export class WppConnectService {
   constructor(
     @InjectRepository(QRCode)
     private qrCodeRepository: Repository<QRCode>,
+    private geminiService: GeminiService
   ) {}
   public client: Whatsapp;
   private qrCode: string;
   private qrCodeGenerated = false;
   private sessions: Map<string, Whatsapp> = new Map();
   private clientSessions = new Map();
+  private chatSessions: Map<string, any> = new Map();
 
   /**
    * Connects to the WhatsApp service.
@@ -100,11 +103,34 @@ export class WppConnectService {
    */
     async startListeningForMessages(): Promise<void> {
       this.clientSessions.forEach((client, sessionName) => {
-        client.onMessage((message: Message) => {
-          console.log(`Received a new message on session ${sessionName}:`, message.content);
-          // Aqui você pode adicionar o código para processar a mensagem recebida.
+        client.onMessage(async (message: Message) => {
+          if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
+            console.log('Mensagem ignorada pela IA');
+            return;
+          }
+          this.logReceivedMessage(sessionName, message);
+    
+          if (!this.chatSessions.has(sessionName)) {
+            this.chatSessions.set(sessionName, await this.geminiService.startChat([]));
+          }
+    
+          const textAi = await this.getAiResponse(sessionName, message.content);
+          const response = await this.sendMessage(message.from, textAi); 
+          console.log('mensagem: '+ message.content + ' -----> Res: '+ textAi);
+          
         });
       });
+    }
+
+    logReceivedMessage(sessionName: string, message: Message): void {
+      const now = new Date();
+      const timestamp = now.toLocaleString();
+      console.log(`[${timestamp}] Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
+    }
+
+    async getAiResponse(sessionName: string, messageContent: string): Promise<string> {
+      const chat = this.chatSessions.get(sessionName);
+      return await chat.sendMessageToAI(messageContent, sessionName);
     }
 
 
