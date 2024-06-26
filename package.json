@@ -4,7 +4,7 @@
   "description": "A simple NestJS project to use wppconnect",
   "main": "main.js",
   "scripts": {
-    "start": "node dist/main",
+    "start": "nest start",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start:dev": "nest start --watch",
@@ -21,6 +21,7 @@
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/typeorm": "^10.0.2",
     "@wppconnect-team/wppconnect": "^1.0.0",
+    "dotenv": "^16.4.5",
     "mysql": "^2.18.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.5.5",
