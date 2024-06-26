@@ -8,19 +8,21 @@ import { GeminiAI } from './models/gemini-ai.entity';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     WppConnectModule,
-    TypeOrmModule.forFeature([QRCode, GeminiAI]), // Importe o TypeOrmModule para a entidade QRCode
+    TypeOrmModule.forFeature([QRCode, GeminiAI]),
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'ls-79c81d5248e6bd600ffa09607de70e954b0fb098.c1cacccy86g2.us-west-2.rds.amazonaws.com',
+      host: process.env.HOST,
       port: 3306,
-      username: 'dbmasteruser',
-      password: '28071995',
-      database: 'dbmaster',
+      username: process.env.USER_NAME,
+      password: process.env.PASSWORD,
+      database: process.env.DATABASE,
       entities: [__dirname + '/models/*.entity{.ts,.js}'],
       synchronize: true,
     }),
-    ConfigModule.forRoot(),
   ],
   providers: [WppConnectService],
 })
