@@ -16,17 +16,14 @@ export class WppConnectService {
     private qrCodeRepository: Repository<QRCode>,
     private geminiService: GeminiService
   ) {
-    this.userDataDir = process.env.USER_DATA_DIR || path.join('/tmp', 'wppconnect');
-    this.tokensDir = process.env.TOKENS_DIR || path.join('/tmp', 'tokens');
+    this.tokensDir = process.env.TOKENS_DIR ?? path.join('/tmp', 'tokens');
   }
 
   public client: Whatsapp;
   private qrCode: string;
   private qrCodeGenerated = false;
-  private sessions: Map<string, Whatsapp> = new Map();
   private clientSessions = new Map();
   private chatSessions: Map<string, any> = new Map();
-  private userDataDir: string;
   private tokensDir: string;
 
   async connect(sessionName: string): Promise<boolean> {
@@ -39,7 +36,7 @@ export class WppConnectService {
           puppeteerOptions: {
             executablePath: fs.existsSync(chromePath) ? chromePath : undefined,
             args: ["--no-sandbox"],
-            userDataDir: this.userDataDir,
+            userDataDir: this.tokensDir+'/'+sessionName,
           },
           logQR: true,
           autoClose: 0,
