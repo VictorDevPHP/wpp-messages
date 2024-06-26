@@ -12,11 +12,11 @@ import { GeminiAI } from './models/gemini-ai.entity';
     TypeOrmModule.forFeature([QRCode, GeminiAI]), // Importe o TypeOrmModule para a entidade QRCode
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'localhost',
+      host: 'ls-79c81d5248e6bd600ffa09607de70e954b0fb098.c1cacccy86g2.us-west-2.rds.amazonaws.com',
       port: 3306,
-      username: 'root',
-      password: '',
-      database: 'laravel_11_app',
+      username: 'dbmasteruser',
+      password: '28071995',
+      database: 'dbmaster',
       entities: [__dirname + '/models/*.entity{.ts,.js}'],
       synchronize: true,
     }),

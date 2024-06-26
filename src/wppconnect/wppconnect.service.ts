@@ -1,4 +1,4 @@
-import { Injectable} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { create, Whatsapp, Message } from "@wppconnect-team/wppconnect";
@@ -9,25 +9,26 @@ import { Repository } from 'typeorm';
 import { existsSync, mkdirSync } from 'fs';
 import { GeminiService } from "src/api/gemini/gemini.service";
 
-
 @Injectable()
 export class WppConnectService {
   constructor(
     @InjectRepository(QRCode)
     private qrCodeRepository: Repository<QRCode>,
     private geminiService: GeminiService
-  ) {}
+  ) {
+    this.userDataDir = process.env.USER_DATA_DIR || path.join('/tmp', 'wppconnect');
+    this.tokensDir = process.env.TOKENS_DIR || path.join('/tmp', 'tokens');
+  }
+
   public client: Whatsapp;
   private qrCode: string;
   private qrCodeGenerated = false;
   private sessions: Map<string, Whatsapp> = new Map();
   private clientSessions = new Map();
   private chatSessions: Map<string, any> = new Map();
+  private userDataDir: string;
+  private tokensDir: string;
 
-  /**
-   * Connects to the WhatsApp service.
-   * @returns A Promise that resolves to a boolean indicating whether the connection was successful.
-   */
   async connect(sessionName: string): Promise<boolean> {
     const chromePath = process.env.CHROME_PATH;
     let connected = false;
@@ -38,6 +39,7 @@ export class WppConnectService {
           puppeteerOptions: {
             executablePath: fs.existsSync(chromePath) ? chromePath : undefined,
             args: ["--no-sandbox"],
+            userDataDir: this.userDataDir,
           },
           logQR: true,
           autoClose: 0,
@@ -60,26 +62,20 @@ export class WppConnectService {
       } catch (error) {
         connected = false;
       }
-      if(connected == false){
-        const sessionDirPath = path.join(__dirname, '..', '..', 'tokens', sessionName);
+      if (connected == false) {
+        const sessionDirPath = path.join(this.tokensDir, sessionName);
         console.log(sessionDirPath);
         if (fs.existsSync(sessionDirPath)) {
           console.log(`Directory ${sessionDirPath} exists`);
           fs.rmdirSync(sessionDirPath, { recursive: true });
           console.log(`Directory ${sessionDirPath} has been removed`);
         }
-      }else{
+      } else {
         this.startListeningForMessages();
       }
     return connected;
   }
 
-  /**
-   * Sends a message to a phone number using the connected client.
-   * @param phone The phone number to send the message to.
-   * @param text The text message to send.
-   * @returns A promise that resolves to an object with the success status and message details.
-   */
   async sendMessage(phone: string, text: string): Promise<any> {
     try {
       if (!this.client) {
@@ -98,77 +94,67 @@ export class WppConnectService {
     }
   }
 
-    /**
-   * Starts listening for incoming messages.
-   */
-    async startListeningForMessages(): Promise<void> {
-      this.clientSessions.forEach((client, sessionName) => {
-        client.onMessage(async (message: Message) => {
-          if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
-            console.log('Mensagem ignorada pela IA');
-            return;
-          }
-          this.logReceivedMessage(sessionName, message);
-    
-          if (!this.chatSessions.has(sessionName)) {
-            this.chatSessions.set(sessionName, await this.geminiService.startChat([]));
-          }
-    
-          const textAi = await this.getAiResponse(sessionName, message.content);
-          const response = await this.sendMessage(message.from, textAi); 
-          console.log('mensagem: '+ message.content + ' -----> Res: '+ textAi);
-          
-        });
-      });
-    }
-
-    logReceivedMessage(sessionName: string, message: Message): void {
-      const now = new Date();
-      const timestamp = now.toLocaleString();
-      console.log(`[${timestamp}] Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
-    }
-
-    async getAiResponse(sessionName: string, messageContent: string): Promise<string> {
-      const chat = this.chatSessions.get(sessionName);
-      return await chat.sendMessageToAI(messageContent, sessionName);
-    }
-
-
-    async startAllSessions(): Promise<void> {
-      const sessions = this.listSessions();
-      if (!sessions || sessions.length === 0) {
-        console.error('No sessions found');
-        return;
-      }
-      for (const session of sessions) {
-        try {
-          const connected = await this.connect(session);
-          if (connected) {
-            console.log(`Session ${session} started successfully.`);
-          } else {
-            console.error(`Failed to start session ${session}`);
-          }
-        } catch (error) {
-          console.error(`Failed to start session ${session}:`, error);
+  async startListeningForMessages(): Promise<void> {
+    this.clientSessions.forEach((client, sessionName) => {
+      client.onMessage(async (message: Message) => {
+        if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
+          console.log('Mensagem ignorada pela IA');
+          return;
         }
-      }
-      return Promise.resolve();
-    }
+        this.logReceivedMessage(sessionName, message);
 
-  /**
-   * Retrieves the QR code for the WhatsApp connection.
-   * @returns The QR code as a string.
-   */
+        if (!this.chatSessions.has(sessionName)) {
+          this.chatSessions.set(sessionName, await this.geminiService.startChat([]));
+        }
+
+        const textAi = await this.getAiResponse(sessionName, message.content);
+        const response = await this.sendMessage(message.from, textAi); 
+        console.log('mensagem: ' + message.content + ' -----> Res: ' + textAi);
+      });
+    });
+  }
+
+  logReceivedMessage(sessionName: string, message: Message): void {
+    const now = new Date();
+    const timestamp = now.toLocaleString();
+    console.log(`[${timestamp}] Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
+  }
+
+  async getAiResponse(sessionName: string, messageContent: string): Promise<string> {
+    const chat = this.chatSessions.get(sessionName);
+    return await chat.sendMessageToAI(messageContent, sessionName);
+  }
+
+  async startAllSessions(): Promise<void> {
+    const sessions = this.listSessions();
+    if (!sessions || sessions.length === 0) {
+      console.error('No sessions found');
+      return;
+    }
+    for (const session of sessions) {
+      try {
+        const connected = await this.connect(session);
+        if (connected) {
+          console.log(`Session ${session} started successfully.`);
+        } else {
+          console.error(`Failed to start session ${session}`);
+        }
+      } catch (error) {
+        console.error(`Failed to start session ${session}:`, error);
+      }
+    }
+    return Promise.resolve();
+  }
+
   getQrCode(): string {
     console.log("QR Gerado");
     return this.qrCode;
   }
-  
+
   listSessions(): string[] {
-    const sessionDirPath = path.join(__dirname, '..', '..', 'tokens');
-    if (!existsSync(sessionDirPath)) {
-      mkdirSync(sessionDirPath);
+    if (!existsSync(this.tokensDir)) {
+      mkdirSync(this.tokensDir);
     }
-    return fs.readdirSync(sessionDirPath);
+    return fs.readdirSync(this.tokensDir);
   }
 }

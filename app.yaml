@@ -1,0 +1,14 @@
+runtime: nodejs20
+
+env_variables:
+  NODE_ENV: 'production'
+  CHROME_PATH: /usr/bin/google-chrome-stable
+  HEADLESS: shell
+  USER_DATA_DIR: /tmp/wppconnect
+  TOKENS_DIR: /tmp/tokens
+
+
+handlers:
+  - url: /.*
+    secure: always
+    script: auto
