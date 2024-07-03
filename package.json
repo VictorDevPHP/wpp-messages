@@ -23,6 +23,7 @@
     "@wppconnect-team/wppconnect": "^1.0.0",
     "dotenv": "^16.4.5",
     "mysql": "^2.18.1",
+    "mysql2": "^3.10.2",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.5.5",
     "typeorm": "^0.3.20"

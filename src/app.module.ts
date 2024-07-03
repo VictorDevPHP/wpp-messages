@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { WppConnectService } from './wppconnect/wppconnect.service';
 import { QRCode } from 'src/entities/qrcode.entity/qrcode.entity';
 import { GeminiAI } from './models/gemini-ai.entity';
+import { createConnection } from 'typeorm';
 
 @Module({
   imports: [
@@ -13,15 +14,23 @@ import { GeminiAI } from './models/gemini-ai.entity';
     }),
     WppConnectModule,
     TypeOrmModule.forFeature([QRCode, GeminiAI]),
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.HOST,
-      port: 3306,
-      username: process.env.USER_NAME,
-      password: process.env.PASSWORD,
-      database: process.env.DATABASE,
-      entities: [__dirname + '/models/*.entity{.ts,.js}'],
-      synchronize: true,
+    TypeOrmModule.forRootAsync({
+      useFactory: () => ({
+        type: 'mysql',
+        host: process.env.HOST,
+        port: parseInt(process.env.DB_PORT, 10) || 3306,
+        username: process.env.USER_NAME,
+        password: process.env.PASSWORD,
+        database: process.env.DATABASE,
+        entities: [__dirname + '/models/*.entity{.ts,.js}'],
+        synchronize: true,
+        extra: {
+          connectionLimit: 10,
+        },
+        authPlugins: {
+          mysql_native_password: 'mysql_native_password',
+        },
+      }),
     }),
   ],
   providers: [WppConnectService],
