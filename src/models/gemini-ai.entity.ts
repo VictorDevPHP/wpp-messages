@@ -13,4 +13,7 @@ export class GeminiAI {
 
   @Column({ type: 'varchar', length: 200 })
   session_name: string;
+
+  @Column({ type: 'varchar', length: 50})
+  active: string;
 }
