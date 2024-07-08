@@ -31,13 +31,18 @@ export class GeminiService {
             sendMessageToAI: async (msg: string, sessionName: string) => {
                 const geminiAI = await this.geminiAIRepository.findOne({ where: { session_name: sessionName } });
                 if (!geminiAI) {
-                    throw new Error(`Não foi encontrada nenhuma sessão com o nome ${sessionName}`);
+                    throw new Error(`Sessão não encontrada para: ${sessionName}`);
                 }
-                const instruction = geminiAI.instruct;
-                const result = await chat.sendMessage(instruction + ': ' + msg);
-                const response = await result.response;
-                const text = response.text();
-                return text;
+                
+                if(geminiAI.active == 'false'){
+                    throw new Error (`Geração de texto desativada para: ${sessionName}`)
+                }else{
+                    const instruction = geminiAI.instruct;
+                    const result = await chat.sendMessage(instruction + ': ' + msg);
+                    const response = await result.response;
+                    const text = response.text();
+                    return text;
+                }
             }
         };
     }
