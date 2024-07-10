@@ -29,47 +29,47 @@ export class WppConnectService {
   async connect(sessionName: string): Promise<boolean> {
     const chromePath = process.env.CHROME_PATH;
     let connected = false;
-      try {
-        this.client = await create({
-          session: sessionName,
-          headless: process.env.HEADLESS === 'true' ? true : process.env.HEADLESS === 'false' ? false : 'shell',
-          puppeteerOptions: {
-            executablePath: fs.existsSync(chromePath) ? chromePath : undefined,
-            args: ["--no-sandbox"],
-            userDataDir: this.tokensDir+'/'+sessionName,
-          },
-          logQR: true,
-          autoClose: 0,
-          catchQR: async (base64Qr, asciiQR) => {
-            this.qrCode = base64Qr;
-            this.qrCodeGenerated = true;
-            this.qrCodeRepository.insert({
-              qrCode: base64Qr,
-              session: sessionName
-            }).then(() => {
-              log('QR Code salvo no banco de dados com sucesso');
-            }).catch(error => {
-              console.error('Erro ao salvar o QR Code no banco de dados: ', error);
-            });
-            this.getQrCode();
-          },
-        });
-        this.clientSessions.set(sessionName, this.client);
-        connected = true;
-      } catch (error) {
-        connected = false;
+    try {
+      this.client = await create({
+        session: sessionName,
+        headless: process.env.HEADLESS === 'true' ? true : process.env.HEADLESS === 'false' ? false : 'shell',
+        puppeteerOptions: {
+          executablePath: fs.existsSync(chromePath) ? chromePath : undefined,
+          args: ["--no-sandbox"],
+          userDataDir: this.tokensDir + '/' + sessionName,
+        },
+        logQR: true,
+        autoClose: 0,
+        catchQR: async (base64Qr, asciiQR) => {
+          this.qrCode = base64Qr;
+          this.qrCodeGenerated = true;
+          this.qrCodeRepository.insert({
+            qrCode: base64Qr,
+            session: sessionName
+          }).then(() => {
+            log('QR Code salvo no banco de dados com sucesso');
+          }).catch(error => {
+            console.error('Erro ao salvar o QR Code no banco de dados: ', error);
+          });
+          this.getQrCode();
+        },
+      });
+      this.clientSessions.set(sessionName, this.client);
+      connected = true;
+    } catch (error) {
+      connected = false;
+    }
+    if (connected == false) {
+      const sessionDirPath = path.join(this.tokensDir, sessionName);
+      console.log(sessionDirPath);
+      if (fs.existsSync(sessionDirPath)) {
+        console.log(`Directory ${sessionDirPath} exists`);
+        fs.rmdirSync(sessionDirPath, { recursive: true });
+        console.log(`Directory ${sessionDirPath} has been removed`);
       }
-      if (connected == false) {
-        const sessionDirPath = path.join(this.tokensDir, sessionName);
-        console.log(sessionDirPath);
-        if (fs.existsSync(sessionDirPath)) {
-          console.log(`Directory ${sessionDirPath} exists`);
-          fs.rmdirSync(sessionDirPath, { recursive: true });
-          console.log(`Directory ${sessionDirPath} has been removed`);
-        }
-      } else {
-        this.startListeningForMessages();
-      }
+    } else {
+      this.startListeningForMessages();
+    }
     return connected;
   }
 
@@ -101,15 +101,16 @@ export class WppConnectService {
         this.logReceivedMessage(sessionName, message);
 
         if (!this.chatSessions.has(sessionName)) {
-          this.chatSessions.set(sessionName, await this.geminiService.startChat([]));
+          this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName, []));
         }
 
         const textAi = await this.getAiResponse(sessionName, message.content);
-        const response = await this.sendMessage(message.from, textAi); 
+        const response = await this.sendMessage(message.from, textAi);
         console.log('mensagem: ' + message.content + ' -----> Res: ' + textAi);
       });
     });
   }
+
 
   logReceivedMessage(sessionName: string, message: Message): void {
     const now = new Date();

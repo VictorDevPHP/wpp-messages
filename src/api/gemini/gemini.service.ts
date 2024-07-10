@@ -11,11 +11,24 @@ export class GeminiService {
         private httpService: HttpService,
         @InjectRepository(GeminiAI)
         private geminiAIRepository: Repository<GeminiAI>,
-    ){}
+    ) {}
 
-    async startChat(history: {role: string, text: string}[]) {
+    async startChat(sessionName: string, history: {role: string, text: string}[]) {
+        const geminiAI = await this.geminiAIRepository.findOne({
+            where: { session_name: sessionName },
+            select: ['instruct'],
+        });
+
+        if (!geminiAI) {
+            throw new Error(`Sessão não encontrada para: ${sessionName}`);
+        }
+
+        const instruction = geminiAI.instruct;
         const genAI = new GoogleGenerativeAI(process.env.GEM_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            systemInstruction: instruction,
+        });
 
         const chat = model.startChat({
             history: history.map(message => ({
@@ -34,11 +47,10 @@ export class GeminiService {
                     throw new Error(`Sessão não encontrada para: ${sessionName}`);
                 }
                 
-                if(geminiAI.active == 'false'){
-                    throw new Error (`Geração de texto desativada para: ${sessionName}`)
-                }else{
-                    const instruction = geminiAI.instruct;
-                    const result = await chat.sendMessage(instruction + ': ' + msg);
+                if (geminiAI.active === 'false') {
+                    throw new Error(`Geração de texto desativada para: ${sessionName}`);
+                } else {
+                    const result = await chat.sendMessage(msg);
                     const response = await result.response;
                     const text = response.text();
                     return text;
