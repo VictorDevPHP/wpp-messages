@@ -60,13 +60,7 @@ export class WppConnectService {
       connected = false;
     }
     if (connected == false) {
-      const sessionDirPath = path.join(this.tokensDir, sessionName);
-      console.log(sessionDirPath);
-      if (fs.existsSync(sessionDirPath)) {
-        console.log(`Directory ${sessionDirPath} exists`);
-        fs.rmdirSync(sessionDirPath, { recursive: true });
-        console.log(`Directory ${sessionDirPath} has been removed`);
-      }
+      console.log('Não foi possivel se conectar');
     } else {
       this.startListeningForMessages();
     }
@@ -93,34 +87,26 @@ export class WppConnectService {
 
   async startListeningForMessages(): Promise<void> {
     this.clientSessions.forEach((client, sessionName) => {
-      client.onMessage(async (message: Message) => {
-        if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
-          console.log('Mensagem ignorada pela IA');
-          return;
-        }
-        this.logReceivedMessage(sessionName, message);
+        client.onMessage(async (message: Message) => {
+            if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
+                console.log('Mensagem ignorada pela IA');
+                return;
+            }
 
-        if (!this.chatSessions.has(sessionName)) {
-          this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName, []));
-        }
+            const now = new Date();
+            const timestamp = now.toLocaleString();
+            console.log(`[${timestamp}] Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
 
-        const textAi = await this.getAiResponse(sessionName, message.content);
-        const response = await this.sendMessage(message.from, textAi);
-        console.log('mensagem: ' + message.content + ' -----> Res: ' + textAi);
-      });
+            const textAi = await this.getAiResponse(sessionName, message.content);
+            console.log('mensagem: ' + message.content + ' ----- ' + textAi); 
+            const response = await this.sendMessage(message.from, textAi);
+        });
     });
   }
 
-
-  logReceivedMessage(sessionName: string, message: Message): void {
-    const now = new Date();
-    const timestamp = now.toLocaleString();
-    console.log(`[${timestamp}] Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
-  }
-
   async getAiResponse(sessionName: string, messageContent: string): Promise<string> {
-    const chat = this.chatSessions.get(sessionName);
-    return await chat.sendMessageToAI(messageContent, sessionName);
+      const chat = this.chatSessions.get(sessionName);
+      return await chat.sendMessageToAI(messageContent, sessionName);
   }
 
   async startAllSessions(): Promise<void> {
