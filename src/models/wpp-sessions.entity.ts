@@ -11,7 +11,7 @@ export class WppSessions {
   @Column({ type: 'int', nullable: true })
   customer_id: number | null;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'text'})
   qrcode: string;
 
   @Column({ type: 'varchar', length: 255 })
