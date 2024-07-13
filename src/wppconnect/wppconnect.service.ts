@@ -5,15 +5,21 @@ import { create, Whatsapp, Message } from "@wppconnect-team/wppconnect";
 import * as fs from 'fs';
 import { log } from "console";
 import { QRCode } from '../models/qrCode.entity';
+import { WppSessions } from "src/models/wpp-sessions.entity";
 import { Repository } from 'typeorm';
 import { existsSync, mkdirSync } from 'fs';
 import { GeminiService } from "src/api/gemini/gemini.service";
 
 @Injectable()
 export class WppConnectService {
+  
   constructor(
     @InjectRepository(QRCode)
     private qrCodeRepository: Repository<QRCode>,
+
+    @InjectRepository(WppSessions)
+    private wppSessionsRepository: Repository<WppSessions>,
+
     private geminiService: GeminiService
   ) {
     this.tokensDir = process.env.TOKENS_DIR ?? path.join('/tmp', 'tokens');
@@ -63,6 +69,7 @@ export class WppConnectService {
       console.log('Não foi possivel se conectar');
     } else {
       this.startListeningForMessages();
+      await this.updateSessionStatus(sessionName, true);
     }
     return connected;
   }
@@ -96,7 +103,9 @@ export class WppConnectService {
             const now = new Date();
             const timestamp = now.toLocaleString();
             console.log(`[${timestamp}] Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
-
+            if (!this.chatSessions.has(sessionName)) {
+              this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
+            }
             const textAi = await this.getAiResponse(sessionName, message.content);
             console.log('mensagem: ' + message.content + ' ----- ' + textAi); 
             const response = await this.sendMessage(message.from, textAi);
@@ -140,5 +149,22 @@ export class WppConnectService {
       mkdirSync(this.tokensDir);
     }
     return fs.readdirSync(this.tokensDir);
+  }
+
+  async updateSessionStatus(sessionName: string, connected: boolean) {
+    let session = await this.wppSessionsRepository.findOne({ where: { session_name: sessionName } });
+
+    if (session) {
+      session.connected = connected;
+      await this.wppSessionsRepository.save(session);
+    } else {
+      session = this.wppSessionsRepository.create({
+        session_name: sessionName,
+        connected: connected,
+        customer_id: null,
+        qrcode: this.qrCode
+      });
+      await this.wppSessionsRepository.save(session);
+    }
   }
 }

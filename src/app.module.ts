@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { WppConnectService } from './wppconnect/wppconnect.service';
 import { QRCode } from 'src/entities/qrcode.entity/qrcode.entity';
 import { GeminiAI } from './models/gemini-ai.entity';
+import { WppSessions } from './models/wpp-sessions.entity';
 import { createConnection } from 'typeorm';
 
 @Module({
@@ -13,7 +14,7 @@ import { createConnection } from 'typeorm';
       isGlobal: true,
     }),
     WppConnectModule,
-    TypeOrmModule.forFeature([QRCode, GeminiAI]),
+    TypeOrmModule.forFeature([QRCode, GeminiAI, WppSessions]),
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'mysql',
