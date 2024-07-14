@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Res } from "@nestjs/common";
+import { Body, Controller, Get, Logger, Post, Res } from "@nestjs/common";
 import { WppConnectService } from "./wppconnect.service";
 import { Response } from "express";
 import { ConfigService } from "@nestjs/config";
@@ -153,7 +153,7 @@ export class WppConnectController {
    * @returns An array of all session names.
    */
   listSessions() {
-    console.log("Listando sessões: ", this.wppConnectService.listSessions());
+    Logger.log("Listando sessões: ", this.wppConnectService.listSessions());
     return this.wppConnectService.listSessions();
   }
 }
