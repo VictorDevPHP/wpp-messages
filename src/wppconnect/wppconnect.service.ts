@@ -107,8 +107,10 @@ export class WppConnectService {
               this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
             }
             const textAi = await this.getAiResponse(sessionName, message.content);
-            Logger.debug('mensagem: ' + message.content + ' ----- ' + textAi); 
-            const response = await this.sendMessage(message.from, textAi);
+            if(textAi != undefined){
+              Logger.debug('mensagem: ' + message.content + ' ----- ' + textAi); 
+              const response = await this.sendMessage(message.from, textAi);
+            }
         });
     });
   }
