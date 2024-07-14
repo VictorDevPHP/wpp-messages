@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { create, Whatsapp, Message } from "@wppconnect-team/wppconnect";
@@ -55,7 +55,7 @@ export class WppConnectService {
           }).then(() => {
             log('QR Code salvo no banco de dados com sucesso');
           }).catch(error => {
-            console.error('Erro ao salvar o QR Code no banco de dados: ', error);
+            Logger.error('Erro ao salvar o QR Code no banco de dados: ', error);
           });
           this.getQrCode();
         },
@@ -66,7 +66,7 @@ export class WppConnectService {
       connected = false;
     }
     if (connected == false) {
-      console.log('Não foi possivel se conectar');
+      Logger.error('Não foi possivel se conectar');
     } else {
       this.startListeningForMessages();
       await this.updateSessionStatus(sessionName, true);
@@ -96,18 +96,18 @@ export class WppConnectService {
     this.clientSessions.forEach((client, sessionName) => {
         client.onMessage(async (message: Message) => {
             if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
-                console.log('Mensagem ignorada pela IA');
+                Logger.verbose('Mensagem ignorada pela IA');
                 return;
             }
 
             const now = new Date();
             const timestamp = now.toLocaleString();
-            console.log(`[${timestamp}] Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
+            Logger.debug(`Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
             if (!this.chatSessions.has(sessionName)) {
               this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
             }
             const textAi = await this.getAiResponse(sessionName, message.content);
-            console.log('mensagem: ' + message.content + ' ----- ' + textAi); 
+            Logger.debug('mensagem: ' + message.content + ' ----- ' + textAi); 
             const response = await this.sendMessage(message.from, textAi);
         });
     });
@@ -121,26 +121,26 @@ export class WppConnectService {
   async startAllSessions(): Promise<void> {
     const sessions = this.listSessions();
     if (!sessions || sessions.length === 0) {
-      console.error('No sessions found');
+      Logger.debug('No sessions found');
       return;
     }
     for (const session of sessions) {
       try {
         const connected = await this.connect(session);
         if (connected) {
-          console.log(`Session ${session} started successfully.`);
+          Logger.verbose(`Session ${session} started successfully.`);
         } else {
-          console.error(`Failed to start session ${session}`);
+          Logger.error(`Failed to start session ${session}`);
         }
       } catch (error) {
-        console.error(`Failed to start session ${session}:`, error);
+        Logger.error(`Failed to start session ${session}:`, error);
       }
     }
     return Promise.resolve();
   }
 
   getQrCode(): string {
-    console.log("QR Gerado");
+    Logger.log("QR Gerado");
     return this.qrCode;
   }
 

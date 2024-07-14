@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { GeminiAI } from 'src/models/gemini-ai.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -32,7 +32,7 @@ export class GeminiService {
                 }
 
                 if (geminiAI.active === 'false') {
-                    throw new Error(`Geração de texto desativada para: ${sessionName}`);
+                    Logger.warn(`Geração de texto desativada para: ${sessionName}`);
                 } else {
                     try {
                         const response = await firstValueFrom(this.httpService.post('http://'+process.env.PY_GEM_URL+'/gemini/generate', {
