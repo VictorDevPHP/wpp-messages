@@ -96,19 +96,18 @@ export class WppConnectService {
     this.clientSessions.forEach((client, sessionName) => {
         client.onMessage(async (message: Message) => {
             if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
-                Logger.verbose('Mensagem ignorada pela IA');
+                Logger.verbose('Mensagem ignorada pela IA', sessionName);
                 return;
             }
 
             const now = new Date();
             const timestamp = now.toLocaleString();
-            Logger.debug(`Mensagem recebida de session ${sessionName}:`, message.from + ': ' + message.content);
+            Logger.debug(`Mensagem recebida de session ${sessionName}:`);
             if (!this.chatSessions.has(sessionName)) {
               this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
             }
             const textAi = await this.getAiResponse(sessionName, message.content);
             if(textAi != undefined){
-              Logger.debug('mensagem: ' + message.content + ' ----- ' + textAi); 
               const response = await this.sendMessage(message.from, textAi);
             }
         });
