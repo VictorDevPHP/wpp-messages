@@ -35,6 +35,7 @@ export class WppConnectService {
   async connect(sessionName: string): Promise<boolean> {
     const chromePath = process.env.CHROME_PATH;
     let connected = false;
+
     try {
       this.client = await create({
         session: sessionName,
@@ -46,31 +47,38 @@ export class WppConnectService {
         },
         logQR: true,
         autoClose: 0,
-        catchQR: async (base64Qr, asciiQR) => {
+        catchQR: async (base64Qr, asciiQR, attempt) => {
           this.qrCode = base64Qr;
           this.qrCodeGenerated = true;
           this.qrCodeRepository.insert({
             qrCode: base64Qr,
             session: sessionName
           }).then(() => {
-            log('QR Code salvo no banco de dados com sucesso');
+            Logger.log('QR Code salvo no banco de dados com sucesso');
+
           }).catch(error => {
             Logger.error('Erro ao salvar o QR Code no banco de dados: ', error);
+
           });
           this.getQrCode();
         },
       });
       this.clientSessions.set(sessionName, this.client);
       connected = true;
+      
     } catch (error) {
       connected = false;
+      
     }
     if (connected == false) {
       Logger.error('Não foi possivel se conectar');
+
     } else {
       this.startListeningForMessages();
       await this.updateSessionStatus(sessionName, true);
+
     }
+
     return connected;
   }
 
@@ -141,7 +149,6 @@ export class WppConnectService {
   }
 
   getQrCode(): string {
-    Logger.log("QR Gerado");
     return this.qrCode;
   }
 
