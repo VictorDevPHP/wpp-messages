@@ -46,30 +46,40 @@ export class WppConnectService {
           userDataDir: this.tokensDir + '/' + sessionName,
         },
         logQR: true,
-        autoClose: 0,
+        autoClose: 59000,
         catchQR: async (base64Qr, asciiQR, attempt) => {
           this.qrCode = base64Qr;
           this.qrCodeGenerated = true;
+
           this.qrCodeRepository.insert({
             qrCode: base64Qr,
             session: sessionName
           }).then(() => {
-            Logger.log('QR Code salvo no banco de dados com sucesso');
+            Logger.log('QR Code salvo no banco de dados com sucesso: tentativa '+ attempt+'/'+'1');
 
           }).catch(error => {
             Logger.error('Erro ao salvar o QR Code no banco de dados: ', error);
 
           });
+          
           this.getQrCode();
-        },
+
+        }
       });
       this.clientSessions.set(sessionName, this.client);
       connected = true;
       
     } catch (error) {
       connected = false;
-      
+      const sessionDirPath = path.join(this.tokensDir, sessionName);
+      Logger.log(sessionDirPath);
+      if (fs.existsSync(sessionDirPath)) {
+        fs.rmdirSync(sessionDirPath, { recursive: true });
+        Logger.log(`Directory ${sessionDirPath} foi removido`);
+      }
+
     }
+    
     if (connected == false) {
       Logger.error('Não foi possivel se conectar');
 
@@ -175,4 +185,5 @@ export class WppConnectService {
       await this.wppSessionsRepository.save(session);
     }
   }
+  
 }
