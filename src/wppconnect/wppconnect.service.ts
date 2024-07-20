@@ -117,10 +117,8 @@ export class WppConnectService {
                 Logger.verbose('Mensagem ignorada pela IA', sessionName);
                 return;
             }
-
-            const now = new Date();
-            const timestamp = now.toLocaleString();
             Logger.debug(`Mensagem recebida de session ${sessionName}:`);
+            
             if (!this.chatSessions.has(sessionName)) {
               this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
             }
