@@ -7,6 +7,7 @@ import { QRCode } from 'src/entities/qrcode.entity/qrcode.entity';
 import { GeminiAI } from './models/gemini-ai.entity';
 import { WppSessions } from './models/wpp-sessions.entity';
 import { createConnection } from 'typeorm';
+import { CustomerAssistant } from './models/CustomerAssistants.entity';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { createConnection } from 'typeorm';
       isGlobal: true,
     }),
     WppConnectModule,
-    TypeOrmModule.forFeature([QRCode, GeminiAI, WppSessions]),
+    TypeOrmModule.forFeature([QRCode, GeminiAI, WppSessions, CustomerAssistant]),
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'mysql',

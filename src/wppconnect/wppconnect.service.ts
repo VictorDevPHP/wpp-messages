@@ -3,12 +3,12 @@ import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { create, Whatsapp, Message } from "@wppconnect-team/wppconnect";
 import * as fs from 'fs';
-import { log } from "console";
 import { QRCode } from '../models/qrCode.entity';
 import { WppSessions } from "src/models/wpp-sessions.entity";
 import { Repository } from 'typeorm';
 import { existsSync, mkdirSync } from 'fs';
-import { GeminiService } from "src/api/gemini/gemini.service";
+import { GeminiService } from "src/api/gemini/gemini.service";;
+import { OpenAiService } from 'src/api/openai/openai.service';
 
 @Injectable()
 export class WppConnectService {
@@ -20,7 +20,8 @@ export class WppConnectService {
     @InjectRepository(WppSessions)
     private wppSessionsRepository: Repository<WppSessions>,
 
-    private geminiService: GeminiService
+    private geminiService: GeminiService,
+    private openAiService: OpenAiService
   ) {
     this.tokensDir = process.env.TOKENS_DIR ?? path.join('/tmp', 'tokens');
   }
@@ -119,10 +120,25 @@ export class WppConnectService {
             }
             Logger.debug(`Mensagem recebida de session ${sessionName}:`);
             
-            if (!this.chatSessions.has(sessionName)) {
-              this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
+            let textAi: string | undefined;
+            const isActiveGemini = await this.geminiService.isSessionActive(sessionName);
+            if (isActiveGemini) {
+              if (!this.chatSessions.has(sessionName)) {
+                this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
+              }
+              textAi = await this.getAiResponse(sessionName, message.content);
+            } else {
+              Logger.debug('Gemini desativado:' + sessionName);
             }
-            const textAi = await this.getAiResponse(sessionName, message.content);
+  // -------------------------------------------------------------------------------------------------------------------
+            const isActiveAssistant = await this.openAiService.isAssistantActive(sessionName);
+            if (isActiveAssistant) {
+              textAi = await this.openAiService.createThread(message.sender.id, sessionName, message.content);
+            } else {
+              Logger.debug('Assistente para a sessão: ' + sessionName);
+            }
+
+
             if(textAi != undefined){
               const response = await this.sendMessage(message.from, textAi);
             }

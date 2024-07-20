@@ -48,4 +48,12 @@ export class GeminiService {
             }
         };
     }
+
+    async isSessionActive(sessionName: string): Promise<boolean> {
+        const session = await this.geminiAIRepository.findOne({
+          where: { session_name: sessionName },
+          select: ['active']
+        });
+        return session ? session.active === 'true' : false;
+    }
 }
