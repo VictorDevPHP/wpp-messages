@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
-import { create, Whatsapp, Message } from "@wppconnect-team/wppconnect";
+import { create, Whatsapp, Message, SocketState } from "@wppconnect-team/wppconnect";
 import * as fs from 'fs';
 import { QRCode } from '../models/qrCode.entity';
 import { WppSessions } from "src/models/wpp-sessions.entity";
@@ -12,7 +12,7 @@ import { OpenAiService } from 'src/api/openai/openai.service';
 
 @Injectable()
 export class WppConnectService {
-  
+
   constructor(
     @InjectRepository(QRCode)
     private qrCodeRepository: Repository<QRCode>,
@@ -56,31 +56,33 @@ export class WppConnectService {
             qrCode: base64Qr,
             session: sessionName
           }).then(() => {
-            Logger.log('QR Code salvo no banco de dados com sucesso: tentativa '+ attempt+'/'+'1');
+            Logger.log('QR Code salvo no banco de dados com sucesso: tentativa ' + attempt + '/' + '1');
 
           }).catch(error => {
             Logger.error('Erro ao salvar o QR Code no banco de dados: ', error);
 
           });
-          
+
           this.getQrCode();
 
         }
       });
       this.clientSessions.set(sessionName, this.client);
       connected = true;
-      
+      this.client.onStateChange((state) => {
+        Logger.debug(`Estado da sessão ${sessionName} mudou para: ${state}`);
+        if (state === SocketState.UNPAIRED || state === SocketState.CONFLICT) {
+          Logger.warn(`Sessão ${sessionName} foi desconectada`);
+          this.removePath(sessionName);
+          this.updateSessionStatus(sessionName, false);
+        }
+      });
     } catch (error) {
       connected = false;
-      const sessionDirPath = path.join(this.tokensDir, sessionName);
-      Logger.log(sessionDirPath);
-      if (fs.existsSync(sessionDirPath)) {
-        fs.rmdirSync(sessionDirPath, { recursive: true });
-        Logger.log(`Directory ${sessionDirPath} foi removido`);
-      }
+      await this.removePath(sessionName);
 
     }
-    
+
     if (connected == false) {
       Logger.error('Não foi possivel se conectar');
 
@@ -113,42 +115,42 @@ export class WppConnectService {
 
   async startListeningForMessages(): Promise<void> {
     this.clientSessions.forEach((client, sessionName) => {
-        client.onMessage(async (message: Message) => {
-            if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
-                Logger.verbose('Mensagem ignorada pela IA', sessionName);
-                return;
-            }
-            Logger.debug(`Mensagem recebida de session ${sessionName}:`);
-            
-            let textAi: string | undefined;
-            const isActiveGemini = await this.geminiService.isSessionActive(sessionName);
-            if (isActiveGemini) {
-              if (!this.chatSessions.has(sessionName)) {
-                this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
-              }
-              textAi = await this.getAiResponse(sessionName, message.content);
-            } else {
-              Logger.debug('Gemini desativado:' + sessionName);
-            }
-  // -------------------------------------------------------------------------------------------------------------------
-            const isActiveAssistant = await this.openAiService.isAssistantActive(sessionName);
-            if (isActiveAssistant) {
-              textAi = await this.openAiService.createThread(message.sender.id, sessionName, message.content);
-            } else {
-              Logger.debug('Assistente para a sessão: ' + sessionName);
-            }
+      client.onMessage(async (message: Message) => {
+        if (message.chatId === 'status@broadcast' || ['image/jpeg', 'audio/ogg; codecs=opus'].includes(message.mimetype) || message.isGroupMsg === true) {
+          Logger.verbose('Mensagem ignorada pela IA', sessionName);
+          return;
+        }
+        Logger.debug(`Mensagem recebida de session ${sessionName}:`);
+        Logger.debug(message);
+        let textAi: string | undefined;
+        const isActiveGemini = await this.geminiService.isSessionActive(sessionName);
+        if (isActiveGemini) {
+          if (!this.chatSessions.has(sessionName)) {
+            this.chatSessions.set(sessionName, await this.geminiService.startChat(sessionName));
+          }
+          textAi = await this.getAiResponse(sessionName, message.content);
+        } else {
+          Logger.debug('Gemini desativado:' + sessionName);
+        }
+        // -------------------------------------------------------------------------------------------------------------------
+        const isActiveAssistant = await this.openAiService.isAssistantActive(sessionName);
+        if (isActiveAssistant) {
+          textAi = await this.openAiService.createThread(message.sender.id, sessionName, message, message.sender.name);
+        } else {
+          Logger.debug('Assistente desativado para a sessão: ' + sessionName);
+        }
 
 
-            if(textAi != undefined){
-              const response = await this.sendMessage(message.from, textAi);
-            }
-        });
+        if (textAi != undefined) {
+          const response = await this.sendMessage(message.from, textAi);
+        }
+      });
     });
   }
 
   async getAiResponse(sessionName: string, messageContent: string): Promise<string> {
-      const chat = this.chatSessions.get(sessionName);
-      return await chat.sendMessageToAI(messageContent, sessionName);
+    const chat = this.chatSessions.get(sessionName);
+    return await chat.sendMessageToAI(messageContent, sessionName);
   }
 
   async startAllSessions(): Promise<void> {
@@ -199,5 +201,30 @@ export class WppConnectService {
       await this.wppSessionsRepository.save(session);
     }
   }
-  
+
+  async removePath(sessionName: string) {
+    const sessionDirPath = path.join(this.tokensDir, sessionName);
+    Logger.log(sessionDirPath);
+    if (fs.existsSync(sessionDirPath)) {
+      try {
+        fs.rmSync(sessionDirPath, { recursive: true, force: true });
+        Logger.log(`Directory ${sessionDirPath} foi removido`);
+      } catch (error) {
+        if (error.code === 'EPERM') {
+          Logger.error(`Erro ao remover o diretório ${sessionDirPath}: Permissão negada`);
+          setTimeout(() => {
+            try {
+              fs.rmSync(sessionDirPath, { recursive: true, force: true });
+              Logger.log(`Directory ${sessionDirPath} foi removido após tentativa novamente`);
+            } catch (retryError) {
+              Logger.error(`Erro ao remover o diretório ${sessionDirPath} na segunda tentativa: ${retryError}`);
+            }
+          }, 1000);
+        } else {
+          Logger.error(`Erro ao remover o diretório ${sessionDirPath}: ${error}`);
+        }
+      }
+    }
+  }
+
 }

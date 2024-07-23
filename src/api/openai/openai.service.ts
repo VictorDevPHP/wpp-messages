@@ -22,7 +22,7 @@ export class OpenAiService {
     return assistant ? assistant.active : false;
   }
 
-  async createThread(number, sessionName, msg) {
+  async createThread(number, sessionName, msg, name) {
     Logger.debug('Criando thread');
 
     const url = 'http://'+process.env.API_OPENAI+'/openai/createThread';
@@ -31,6 +31,7 @@ export class OpenAiService {
     const body = {
       session_name: sessionName,
       number: number,
+      name,
     };
 
     try {
@@ -43,7 +44,7 @@ export class OpenAiService {
           );
 
       Logger.debug('Thread criada com sucesso:', response.data);
-      const textMessage = await this.sendMessage(number, msg);
+      const textMessage = await this.sendMessage(number, msg, name);
       console.log(textMessage.message);
            
       return textMessage.message;
@@ -53,7 +54,7 @@ export class OpenAiService {
     }
   }
 
-  async sendMessage(number, message) {
+  async sendMessage(number, message, name) {
     Logger.debug('Enviando mensagem');
 
     const url = 'http://'+process.env.API_OPENAI+'/openai/sendMessage';
@@ -61,6 +62,7 @@ export class OpenAiService {
     const body = {
       number: number,
       message: message,
+      name
     };
 
     try {
