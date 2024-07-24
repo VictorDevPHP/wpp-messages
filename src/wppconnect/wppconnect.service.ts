@@ -121,7 +121,6 @@ export class WppConnectService {
           return;
         }
         Logger.debug(`Mensagem recebida de session ${sessionName}:`);
-        Logger.debug(message);
         let textAi: string | undefined;
         const isActiveGemini = await this.geminiService.isSessionActive(sessionName);
         if (isActiveGemini) {
@@ -135,7 +134,7 @@ export class WppConnectService {
         // -------------------------------------------------------------------------------------------------------------------
         const isActiveAssistant = await this.openAiService.isAssistantActive(sessionName);
         if (isActiveAssistant) {
-          textAi = await this.openAiService.createThread(message.sender.id, sessionName, message, message.sender.name);
+          textAi = await this.openAiService.createThread(message.sender.id, sessionName, message.content, message.sender.name);
         } else {
           Logger.debug('Assistente desativado para a sessão: ' + sessionName);
         }

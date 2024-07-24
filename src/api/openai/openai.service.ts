@@ -67,7 +67,11 @@ export class OpenAiService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(url, body)
+        this.httpService.post(url, body, {
+          headers: {
+            'Content-Type': 'application/json', 
+          },
+        })
       );
 
       Logger.debug('Mensagem enviada com sucesso:', response.data);
