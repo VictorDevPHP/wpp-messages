@@ -156,4 +156,10 @@ export class WppConnectController {
     Logger.log("Listando sessões: ", this.wppConnectService.listSessions());
     return this.wppConnectService.listSessions();
   }
+
+  @Post("disconect")
+  async disconect(@Body() body: { session: string;}){
+    Logger.log(body);
+    return this.wppConnectService.disconect(body.session);
+  }
 }

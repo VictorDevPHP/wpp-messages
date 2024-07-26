@@ -47,7 +47,7 @@ export class WppConnectService {
           userDataDir: this.tokensDir + '/' + sessionName,
         },
         logQR: true,
-        autoClose: 59000,
+        autoClose: 58000,
         catchQR: async (base64Qr, asciiQR, attempt) => {
           this.qrCode = base64Qr;
           this.qrCodeGenerated = true;
@@ -202,6 +202,10 @@ export class WppConnectService {
   }
 
   async removePath(sessionName: string) {
+    if (!sessionName) {
+      Logger.error('sessionName is not defined');
+      return;
+    }
     const sessionDirPath = path.join(this.tokensDir, sessionName);
     Logger.log(sessionDirPath);
     if (fs.existsSync(sessionDirPath)) {
@@ -226,4 +230,13 @@ export class WppConnectService {
     }
   }
 
+  async disconect(sessionName: string){
+    try {
+      await this.removePath(sessionName);
+      await this.updateSessionStatus(sessionName, false);
+      return {response: true};
+    } catch (error) {
+      return {error: false};
+    }
+  }
 }
